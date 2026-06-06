@@ -44,5 +44,9 @@ def test_evidence_is_preserved():
     report = build_session_report(results)
 
     assert report.evidence
-    assert any("宜人性" in item or "合作" in item for item in report.evidence)
-
+    assert any(
+        "宜人性" in item.get("reason", "")
+        or "合作" in item.get("quote", "")
+        or "合作" in item.get("reason", "")
+        for item in report.evidence
+    )

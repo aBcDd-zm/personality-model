@@ -42,4 +42,3 @@ CLI 会把每轮评分写入 `data/outputs/scored_events.jsonl`，并在终端�
 ## 注意
 
 规则评分是启发式 baseline，用于比赛稿原型和后续验证，不是心理诊断，也不是最终心理测量结论。
-

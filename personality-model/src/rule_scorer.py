@@ -6,6 +6,7 @@ from .feature_extractor import enrich_response_meta
 from .schemas import (
     DEFAULT_ACTOR_ID,
     EstimatedPersona,
+    Evidence,
     Feedback,
     ScoreInput,
     ScoreResult,
@@ -19,7 +20,7 @@ OPENNESS_WORDS = {"创新", "新方案", "尝试", "探索", "突破", "实验",
 CONSCIENTIOUSNESS_WORDS = {"质量", "计划", "交付", "负责", "确认", "复盘", "风险", "按时", "关键"}
 EXTRAVERSION_WORDS = {"沟通", "表达", "推动", "主动", "争取", "会议", "讨论", "协调资源"}
 AGREEABLENESS_WORDS = {"合作", "支持", "理解", "安抚", "协调", "帮助", "共情", "团队"}
-NEUROTICISM_WORDS = {"焦虑", "急", "压力", "崩溃", "害怕", "烦", "攻击", "甩锅", "完蛋"}
+NEUROTICISM_WORDS = {"焦虑", "着急", "慌", "很慌", "压力太大", "崩溃", "害怕", "烦","攻击", "甩锅", "完蛋", "撑不住"}
 AVOIDANT_WORDS = {"回避", "等等", "再说", "不确定", "随便", "沉默", "不管"}
 RATIONAL_WORDS = {"数据", "逻辑", "风险", "方案", "优先级", "确认", "评估", "拆分"}
 
@@ -39,9 +40,16 @@ def _sent01(sentiment: float | None) -> float:
 def _hits(text: str, words: set[str]) -> int:
     return sum(1 for word in words if word in text)
 
+def _quote(text: str, fallback: str = "") -> str:
+    clean = (text or "").strip()
+    if not clean:
+        return fallback
+    if len(clean) > 80:
+        return clean[:80] + "..."
+    return clean
 
-def _boost(score: float, hit_count: int, size: float = 8.0) -> float:
-    return clamp(score + min(hit_count * size, 18), 0, 100)
+def _boost(score: float, hit_count: int, size: float = 6.0) -> float:
+    return clamp(score + min(hit_count * size, 14), 0, 100)
 
 
 def estimate_persona_from_response(score_input: ScoreInput) -> EstimatedPersona:
@@ -121,41 +129,101 @@ def decision_style(score_input: ScoreInput, persona: EstimatedPersona) -> str:
         return "empathetic"
     if persona.personality_extraversion >= 62 or persona.personality_openness >= 75:
         return "assertive"
-    return "rational"
+    return "balanced"
 
 
-def evidence_for(score_input: ScoreInput, persona: EstimatedPersona) -> list[str]:
+def evidence_for(score_input: ScoreInput, persona: EstimatedPersona) -> list[Evidence]:
     text = score_input.response_meta.user_free_text_input or ""
-    evidence: list[str] = []
+    selected_option = score_input.response_meta.user_selected_option
+    quote = _quote(text)
+
+    evidence: list[Evidence] = []
+
     if _hits(text, CONSCIENTIOUSNESS_WORDS):
-        evidence.append("用户提到质量、计划、交付或风险控制，体现尽责倾向。")
+        evidence.append(
+            Evidence(
+                trait="personality_conscientiousness",
+                quote=quote,
+                reason="用户提到质量、计划、交付、确认或风险控制，体现尽责倾向。",
+            )
+        )
+
     if _hits(text, AGREEABLENESS_WORDS):
-        evidence.append("用户关注合作、协调或团队支持，体现宜人性线索。")
+        evidence.append(
+            Evidence(
+                trait="personality_agreeableness",
+                quote=quote,
+                reason="用户关注合作、协调、帮助或团队支持，体现宜人性线索。",
+            )
+        )
+
     if _hits(text, OPENNESS_WORDS):
-        evidence.append("用户提出新方案、尝试或突破，体现开放性线索。")
+        evidence.append(
+            Evidence(
+                trait="personality_openness",
+                quote=quote,
+                reason="用户提出新方案、尝试、探索或突破，体现开放性线索。",
+            )
+        )
+
     if _hits(text, EXTRAVERSION_WORDS):
-        evidence.append("用户主动沟通或推动讨论，体现外倾性线索。")
+        evidence.append(
+            Evidence(
+                trait="personality_extraversion",
+                quote=quote,
+                reason="用户主动沟通、表达判断或推动讨论，体现外倾性线索。",
+            )
+        )
+
     if _hits(text, NEUROTICISM_WORDS):
-        evidence.append("用户表达焦虑、压力或攻击性，体现较高神经质线索。")
-    if score_input.response_meta.user_selected_option is not None:
-        evidence.append(f"用户选择了预设选项 {score_input.response_meta.user_selected_option}，用于映射策略倾向。")
+        evidence.append(
+            Evidence(
+                trait="personality_neuroticism",
+                quote=quote,
+                reason="用户表达焦虑、压力、攻击性或强烈负面情绪，体现较高神经质线索。",
+            )
+        )
+
+    if selected_option is not None:
+        evidence.append(
+            Evidence(
+                trait="decision_style",
+                quote=f"用户选择了预设选项 {selected_option}",
+                reason="用户通过预设选项表达处理策略，用于映射本轮决策风格和行为倾向。",
+            )
+        )
+
     if not evidence:
-        evidence.append("本轮证据较少，仅根据回复长度、耗时和基础文本特征做临时估计。")
-    evidence.append("M6 的 npc_role 仅表示发起对话的 NPC；本轮评分对象固定为 M9 actor_id=玩家。")
-    if persona.personality_neuroticism >= 70:
-        evidence.append("neuroticism 分数较高表示更焦虑、压力敏感或情绪不稳定。")
+        evidence.append(
+            Evidence(
+                trait="general",
+                quote=quote,
+                reason="本轮明确证据较少，仅根据回复长度、耗时和基础文本特征做临时估计。",
+            )
+        )
+
     return evidence
 
 
-def confidence_for(score_input: ScoreInput, evidence: list[str]) -> float:
+def confidence_for(score_input: ScoreInput, evidence: list[Evidence]) -> float:
     response = score_input.response_meta
     text_len = response.response_length or len(response.user_free_text_input or "")
-    base = 0.45
-    base += min(text_len / 200, 1) * 0.25
-    base += min(len(evidence) / 6, 1) * 0.2
+    base = 0.35
+
+    if text_len >= 80:
+        base += 0.3
+    elif text_len >= 30:
+        base += 0.22
+    elif text_len >= 10:
+        base += 0.12
+
+    valid_evidence_count = len([item for item in evidence if item.trait != "general"])
+    base += min(valid_evidence_count / 4, 1) * 0.25
+
     if response.user_selected_option is not None:
         base += 0.08
-    return clamp(base, 0.35, 0.9)
+
+    return clamp(base, 0.25, 0.9)
 
 
 def score_with_rules(score_input: ScoreInput) -> ScoreResult:
@@ -173,8 +241,7 @@ def score_with_rules(score_input: ScoreInput) -> ScoreResult:
         decision_style=style,
         evidence=evidence,
         confidence=confidence_for(enriched_input, evidence),
-        scoring_method="rule",
+        scoring_method="rule_baseline",
         prompt_version=PROMPT_VERSION,
         model_version=None,
     )
-

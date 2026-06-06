@@ -223,6 +223,28 @@ class Feedback:
             "neuroticism_change": self.neuroticism_change,
         }
 
+@dataclass(slots=True)
+class Evidence:
+    """Structured behavior evidence used by report and LLM scoring."""
+
+    trait: str
+    quote: str
+    reason: str
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> "Evidence":
+        return cls(
+            trait=str(payload.get("trait") or "general"),
+            quote=str(payload.get("quote") or ""),
+            reason=str(payload.get("reason") or ""),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "trait": self.trait,
+            "quote": self.quote,
+            "reason": self.reason,
+        }
 
 @dataclass(slots=True)
 class ScoreResult:
@@ -231,7 +253,7 @@ class ScoreResult:
     estimated_persona: EstimatedPersona
     feedback: Feedback
     decision_style: str
-    evidence: list[str]
+    evidence: list[Any]
     confidence: float
     scoring_method: str
     prompt_version: str | None = None
@@ -244,7 +266,10 @@ class ScoreResult:
             "estimated_persona": self.estimated_persona.to_dict(),
             "feedback": self.feedback.to_dict(),
             "decision_style": self.decision_style,
-            "evidence": self.evidence,
+            "evidence": [
+                item.to_dict() if hasattr(item, "to_dict") else item
+                for item in self.evidence
+            ],
             "confidence": round(self.confidence, 2),
             "scoring_method": self.scoring_method,
             "prompt_version": self.prompt_version,
@@ -267,7 +292,9 @@ class SessionReport:
             "event_count": self.event_count,
             "average_estimated_persona": self.average_estimated_persona,
             "total_feedback": self.total_feedback,
-            "evidence": self.evidence,
+            "evidence": [
+                item.to_dict() if hasattr(item, "to_dict") else item
+                for item in self.evidence
+            ],
             "average_confidence": round(self.average_confidence, 2),
         }
-

@@ -32,8 +32,43 @@ def parse_llm_json_result(raw_text: str) -> dict[str, Any]:
             raise ValueError(f"LLM result missing estimated_persona.{field}")
         persona[field] = clamp(float(persona[field]), 0, 100)
     payload["estimated_persona"] = persona
-    payload["evidence"] = [str(item) for item in payload.get("evidence", [])]
-    payload["decision_style"] = payload.get("decision_style") or "rational"
+    allowed_styles = {"rational", "empathetic", "assertive", "avoidant", "balanced"}
+    decision_style = payload.get("decision_style") or "balanced"
+    if decision_style not in allowed_styles:
+        decision_style = "balanced"
+    payload["decision_style"] = decision_style
+
+    normalized_evidence = []
+    raw_evidence = payload.get("evidence", [])
+    if isinstance(raw_evidence, list):
+        for item in raw_evidence:
+            if isinstance(item, dict):
+                normalized_evidence.append(
+                    {
+                        "trait": str(item.get("trait") or "general"),
+                        "quote": str(item.get("quote") or ""),
+                        "reason": str(item.get("reason") or ""),
+                    }
+                )
+            else:
+                normalized_evidence.append(
+                    {
+                        "trait": "general",
+                        "quote": "",
+                        "reason": str(item),
+                    }
+                )
+
+    if not normalized_evidence:
+        normalized_evidence.append(
+            {
+                "trait": "general",
+                "quote": "",
+                "reason": "LLM 未返回有效证据，本轮证据不足。",
+            }
+        )
+
+    payload["evidence"] = normalized_evidence
     payload["confidence"] = clamp(float(payload.get("confidence", 0.5)), 0, 1)
     return payload
 
@@ -57,4 +92,3 @@ def score_with_llm(score_input: ScoreInput) -> None:
 
     _ = get_llm_prompt(score_input)
     return None
-

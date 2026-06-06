@@ -304,7 +304,7 @@ class SessionReport:
     event_count: int
     average_estimated_persona: dict[str, float]
     total_feedback: dict[str, int]
-    evidence: list[str]
+    evidence: list[Any]
     average_confidence: float
 
     def to_dict(self) -> dict[str, Any]:

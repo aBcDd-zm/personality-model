@@ -59,9 +59,15 @@
     "neuroticism_change": -1
   },
   "decision_style": "rational",
-  "evidence": ["用户优先拆分风险并保证交付质量。"],
+  "evidence": [
+  {
+    "trait": "personality_conscientiousness",
+    "quote": "用户原话",
+    "reason": "判断理由"
+  }
+],
+  "scoring_method": "rule_baseline"
   "confidence": 0.72,
-  "scoring_method": "rule",
   "prompt_version": "rule_baseline_v1",
   "model_version": null
 }

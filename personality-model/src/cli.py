@@ -26,6 +26,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Score workplace personality events from JSONL.")
     parser.add_argument("--input", required=True, help="Input sample_events.jsonl path")
     parser.add_argument("--output", required=True, help="Output scored_events.jsonl path")
+    parser.add_argument("--method", choices=["rule", "llm", "hybrid"], default="hybrid")
+    parser.add_argument("--use-llm", action="store_true", help="Request LLM scoring when env config allows it")
     args = parser.parse_args()
 
     input_path = Path(args.input)
@@ -36,7 +38,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as handle:
         for payload in read_jsonl(input_path):
             score_input = ScoreInput.from_dict(payload)
-            result = score(score_input)
+            result = score(score_input, method=args.method, use_llm=args.use_llm)
             results.append(result)
             handle.write(json.dumps(result.to_dict(), ensure_ascii=False) + "\n")
 
@@ -46,4 +48,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

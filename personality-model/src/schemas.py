@@ -258,9 +258,14 @@ class ScoreResult:
     scoring_method: str
     prompt_version: str | None = None
     model_version: str | None = None
+    rule_result: dict[str, Any] | None = None
+    llm_result: dict[str, Any] | None = None
+    hybrid_result: dict[str, Any] | None = None
+    final_result: dict[str, Any] | None = None
+    scoring_trace: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data = {
             "metadata": self.metadata.to_dict(),
             "dialogue_event": self.dialogue_event.to_dict(),
             "estimated_persona": self.estimated_persona.to_dict(),
@@ -275,6 +280,22 @@ class ScoreResult:
             "prompt_version": self.prompt_version,
             "model_version": self.model_version,
         }
+        if self.scoring_trace is not None:
+            data["rule_result"] = self.rule_result
+            data["llm_result"] = self.llm_result
+            data["hybrid_result"] = self.hybrid_result
+            data["final_result"] = self.final_result
+            data["scoring_trace"] = self.scoring_trace
+        else:
+            if self.rule_result is not None:
+                data["rule_result"] = self.rule_result
+            if self.llm_result is not None:
+                data["llm_result"] = self.llm_result
+            if self.hybrid_result is not None:
+                data["hybrid_result"] = self.hybrid_result
+            if self.final_result is not None:
+                data["final_result"] = self.final_result
+        return data
 
 
 @dataclass(slots=True)

@@ -6,27 +6,26 @@ from .schemas import ResponseMeta, clamp
 
 
 POSITIVE_WORDS = {
-    "合作",
-    "协调",
+    "感谢",
+    "肯定",
     "支持",
     "理解",
-    "稳定",
-    "确认",
-    "计划",
-    "质量",
-    "负责",
-    "复盘",
+    "信任",
+    "尊重",
+    "共情",
+    "安抚",
     "帮助",
-    "沟通",
-    "冷静",
-    "方案",
+    "配合",
+    "愿意",
 }
+
 NEGATIVE_WORDS = {
     "焦虑",
     "崩溃",
     "害怕",
     "烦",
     "急",
+    "着急",
     "攻击",
     "甩锅",
     "拖延",
@@ -34,7 +33,21 @@ NEGATIVE_WORDS = {
     "不管",
     "完蛋",
     "压力",
+    "压力太大",
+    "愧疚",
+    "自责",
+    "担心",
+    "紧张",
+    "慌",
+    "很慌",
+    "内疚",
+    "不安",
+    "担忧",
+    "冲突",
+    "不公平",
+    "撑不住",
 }
+
 SELF_FOCUS_WORDS = ("我的", "我会", "我来", "我想", "我觉得", "我", "自己", "本人")
 
 
@@ -86,4 +99,3 @@ def enrich_response_meta(response: ResponseMeta) -> ResponseMeta:
         else self_focus_ratio(text)
     )
     return response
-

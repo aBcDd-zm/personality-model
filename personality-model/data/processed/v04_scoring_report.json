@@ -1,0 +1,12 @@
+{
+  "average_confidence": 0.598,
+  "fallback_reason_distribution": {
+    "NONE": 376
+  },
+  "input_event_count": 384,
+  "llm_used_count": 376,
+  "method": "hybrid",
+  "scored_event_count": 376,
+  "skipped_event_count": 8,
+  "use_llm": true
+}

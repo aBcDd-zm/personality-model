@@ -1,0 +1,12 @@
+{
+  "average_confidence": 0.6417,
+  "fallback_reason_distribution": {
+    "METHOD_RULE": 439
+  },
+  "input_event_count": 476,
+  "llm_used_count": 0,
+  "method": "rule",
+  "scored_event_count": 439,
+  "skipped_event_count": 37,
+  "use_llm": false
+}

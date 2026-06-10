@@ -1,0 +1,33 @@
+{
+  "bfi_version_distribution": {
+    "BFI-2-S": 43
+  },
+  "complete_session_count": 33,
+  "effective_session_count": 36,
+  "event_count": 476,
+  "invalid_reasons_count": {
+    "off_task_or_complaint": 5,
+    "possible_prompt_copy": 1,
+    "prompt_fragment_copy": 12,
+    "raw_low_quality": 18,
+    "repeated_chars": 12,
+    "repeated_non_answer": 2
+  },
+  "label_count": 43,
+  "low_quality_event_count": 37,
+  "quality_flag_distribution": {
+    "low_quality": 9,
+    "ok": 229
+  },
+  "raw_row_count": 238,
+  "scene_distribution": {
+    "1": 43,
+    "2": 41,
+    "3": 39,
+    "4": 39,
+    "5": 38,
+    "6": 38
+  },
+  "session_count": 43,
+  "valid_event_count": 439
+}

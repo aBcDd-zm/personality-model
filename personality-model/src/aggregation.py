@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections import defaultdict
 from typing import Any
 
@@ -26,6 +27,23 @@ TRAIT_ALIASES = {
     "personality_neuroticism": ("personality_neuroticism", "neuroticism", "N", "n"),
 }
 
+TRAIT_TARGET_CODES = {
+    "personality_openness": "O",
+    "personality_conscientiousness": "C",
+    "personality_extraversion": "E",
+    "personality_agreeableness": "A",
+    "personality_neuroticism": "N",
+}
+
+TARGET_TRAIT_NAMES = {
+    "O": ("开放性", "openness"),
+    "C": ("尽责性", "conscientiousness"),
+    "E": ("外向性", "extraversion"),
+    "A": ("宜人性", "agreeableness"),
+    "N": ("神经质", "neuroticism"),
+}
+
+NON_TARGET_WEIGHT = 0.15
 CONFIDENCE_THRESHOLD = 0.2
 MAX_EVIDENCE = 10
 
@@ -37,6 +55,32 @@ def _as_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _target_trait_codes(event: dict[str, Any]) -> set[str]:
+    raw = str(event.get("target_traits") or "")
+    codes: set[str] = set()
+
+    for code, names in TARGET_TRAIT_NAMES.items():
+        if re.search(rf"(^|[^A-Za-z]){code}([^A-Za-z]|$)", raw):
+            codes.add(code)
+            continue
+        if any(name in raw for name in names):
+            codes.add(code)
+
+    return codes
+
+
+def _trait_event_weight(event: dict[str, Any], field: str) -> float:
+    target_codes = _target_trait_codes(event)
+    if not target_codes:
+        return 1.0
+
+    trait_code = TRAIT_TARGET_CODES[field]
+    if trait_code in target_codes:
+        return 1.0
+
+    return NON_TARGET_WEIGHT
 
 
 def _quality_flags(event: dict[str, Any]) -> list[str]:
@@ -113,17 +157,25 @@ def _dedupe_evidence(events: list[dict[str, Any]]) -> list[Any]:
 def _weighted_scores(events: list[dict[str, Any]]) -> dict[str, float | None]:
     totals = {field: 0.0 for field in TRAIT_FIELDS}
     weights = {field: 0.0 for field in TRAIT_FIELDS}
+
     for event in events:
         confidence = _as_float(event.get("confidence"))
         if confidence is None:
             continue
+
         scores = extract_trait_scores(event)
+
         for field in TRAIT_FIELDS:
             score = scores.get(field)
             if score is None:
                 continue
-            totals[field] += score * confidence
-            weights[field] += confidence
+
+            trait_weight = _trait_event_weight(event, field)
+            weight = confidence * trait_weight
+
+            totals[field] += score * weight
+            weights[field] += weight
+
     return {
         field: round(totals[field] / weights[field], 4) if weights[field] else None
         for field in TRAIT_FIELDS

@@ -176,6 +176,65 @@ def possible_prompt_copy(user_text: str, prompt: str) -> bool:
     return SequenceMatcher(None, user_text, prompt).ratio() >= 0.85
 
 
+PROMPT_COPY_FRAGMENTS = (
+    "【场景背景】",
+    "【心理小剧场】",
+    "你会怎么回应",
+    "请写出你",
+    "请说明你为什么",
+    "用户回答1",
+    "用户回答2",
+    "追问：",
+    "此时负责人看向你说",
+    "你会选择主动表达",
+)
+
+OFF_TASK_FRAGMENTS = (
+    "题目设置",
+    "这题目",
+    "这个题目",
+    "问卷",
+    "40字",
+    "字数",
+    "好长好累",
+    "又臭又长",
+    "无语了",
+    "懒死",
+    "不好玩",
+    "能不能不要这样",
+    "不能自己搞几个能选",
+    "电话手表",
+    "睡觉睡觉",
+    "大宝贝",
+    "社保",
+)
+
+
+def off_task_or_complaint(user_text: str) -> bool:
+    compact = re.sub(r"\s+", "", user_text or "")
+    if len(compact) < 8:
+        return False
+    return any(fragment in compact for fragment in OFF_TASK_FRAGMENTS)
+
+
+def prompt_fragment_copy(user_text: str) -> bool:
+    compact = re.sub(r"\s+", "", user_text or "")
+    if len(compact) < 20:
+        return False
+    return any(fragment in compact for fragment in PROMPT_COPY_FRAGMENTS)
+
+
+def repeated_non_answer(user_text: str) -> bool:
+    compact = re.sub(r"\s+", "", user_text or "")
+    if not compact:
+        return False
+    if compact.count("我不知道") >= 2:
+        return True
+    if compact in {"不知道", "不清楚", "随便", "没有想法"}:
+        return True
+    return False
+
+
 def quality_for_event(raw_quality: str, user_text: str, prompt: str) -> tuple[list[str], bool, bool]:
     flags: list[str] = []
     compact_len = len(re.sub(r"\s+", "", user_text))
@@ -190,17 +249,33 @@ def quality_for_event(raw_quality: str, user_text: str, prompt: str) -> tuple[li
         flags.append("repeated_chars")
     if possible_prompt_copy(user_text, prompt):
         flags.append("possible_prompt_copy")
+    if prompt_fragment_copy(user_text):
+        flags.append("prompt_fragment_copy")
+    if repeated_non_answer(user_text):
+        flags.append("repeated_non_answer")
+    if off_task_or_complaint(user_text):
+        flags.append("off_task_or_complaint")
 
-    is_low_quality = any(
-        flag in flags
-        for flag in ("raw_low_quality", "empty_text", "too_short", "repeated_chars")
-    )
+    invalid_flags = {
+        "raw_low_quality",
+        "empty_text",
+        "too_short",
+        "repeated_chars",
+        "possible_prompt_copy",
+        "prompt_fragment_copy",
+        "repeated_non_answer",
+        "off_task_or_complaint",
+    }
+
+    is_low_quality = any(flag in invalid_flags for flag in flags)
+
     is_valid_event = (
         raw_quality == "ok"
         and bool(user_text)
         and compact_len >= 10
-        and "repeated_chars" not in flags
+        and not any(flag in invalid_flags for flag in flags)
     )
+
     return flags, is_low_quality, is_valid_event
 
 
@@ -291,7 +366,7 @@ def make_sessions(
         low_quality_count = sum(1 for event in events if event["is_low_quality"])
         complete_bfi = has_complete_bfi(label)
         invalid_reasons = Counter(
-            flag for event in events for flag in event["quality_flags"] if flag != "possible_prompt_copy"
+            flag for event in events for flag in event["quality_flags"]
         )
         scene_count = len(scene_ids)
         completed_scene_count = len(completed_scene_ids)
@@ -331,7 +406,7 @@ def make_quality_report(
     labels: list[dict[str, Any]],
 ) -> dict[str, Any]:
     invalid_reasons = Counter(
-        flag for event in events for flag in event["quality_flags"] if flag != "possible_prompt_copy"
+        flag for event in events for flag in event["quality_flags"]
     )
     return {
         "raw_row_count": len(raw_rows),

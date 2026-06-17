@@ -17,7 +17,8 @@ def build_zero_shot_prompt(score_input: ScoreInput) -> str:
     return (
         "你是“熊起东方”游戏化职场画像系统中的后台评分器。"
         "你的任务是根据一轮职场事件中的 M6 dialogue_event 和 M7 response_meta，"
-        "评估玩家在本轮中体现出的 Big Five 五维人格倾向、决策风格、行为证据和置信度。\n\n"
+        "评估玩家在当前这一轮事件中体现出的 Big Five 五维人格倾向、决策风格、行为证据和置信度。"
+        "这不是心理诊断，也不是长期人格结论。\n\n"
 
         "评分对象规则：\n"
         "1. 评分对象永远是玩家，不是 NPC。\n"
@@ -25,6 +26,8 @@ def build_zero_shot_prompt(score_input: ScoreInput) -> str:
         "3. npc_dialogue_script 只能作为情境背景，不能当作玩家人格证据。\n"
         "4. trigger_condition 只能作为压力或事件背景，不能直接当作玩家人格证据。\n"
         "5. evidence 必须来自 response_meta.user_free_text_input 或 user_selected_option。\n\n"
+        "6. 不要根据 NPC 台词本身判断玩家人格；NPC 的语气、要求和情绪不代表玩家。\n"
+        "7. 只根据当前事件评分，不要推断玩家在其他场景中的稳定人格。\n\n"
 
         "五维人格方向：\n"
         "- personality_openness：开放性。高分表示愿意尝试新方案、接受变化、提出创新路径。\n"
@@ -34,12 +37,13 @@ def build_zero_shot_prompt(score_input: ScoreInput) -> str:
         "- personality_neuroticism：神经质。越高表示越焦虑、越压力敏感、越情绪不稳定。\n"
         "如果前端展示“情绪稳定性”，必须使用 100 - personality_neuroticism。\n\n"
 
-        "决策风格只能从以下五类中选择一个：\n"
+        "决策风格只能从以下六类中选择一个：\n"
         "- rational：关注逻辑、数据、风险、优先级和方案。\n"
         "- empathetic：关注他人感受、合作关系和团队氛围。\n"
         "- assertive：主动推动、明确表态、争取资源。\n"
         "- avoidant：回避冲突、模糊表达或拖延选择。\n"
         "- balanced：同时考虑任务目标、团队关系、风险与执行节奏，没有明显单一倾向。\n\n"
+        "- unclear：用户回答过短、为空或证据不足，无法判断决策风格。\n\n"
 
         "输出要求：\n"
         "1. 只输出合法 JSON，不要 Markdown，不要解释。\n"
@@ -53,14 +57,12 @@ def build_zero_shot_prompt(score_input: ScoreInput) -> str:
 
         "JSON schema:\n"
         "{\n"
-        '  "estimated_persona": {\n'
-        '    "personality_openness": 0,\n'
-        '    "personality_conscientiousness": 0,\n'
-        '    "personality_extraversion": 0,\n'
-        '    "personality_agreeableness": 0,\n'
-        '    "personality_neuroticism": 0\n'
-        "  },\n"
-        '  "decision_style": "rational|empathetic|assertive|avoidant|balanced",\n'
+        '  "personality_openness": 0,\n'
+        '  "personality_conscientiousness": 0,\n'
+        '  "personality_extraversion": 0,\n'
+        '  "personality_agreeableness": 0,\n'
+        '  "personality_neuroticism": 0,\n'
+        '  "decision_style": "rational|empathetic|assertive|avoidant|balanced|unclear",\n'
         '  "evidence": [\n'
         "    {\n"
         '      "trait": "personality_conscientiousness",\n'

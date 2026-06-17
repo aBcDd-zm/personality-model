@@ -1,0 +1,29 @@
+{
+  "bfi_version_distribution": {
+    "BFI-2-S": 36
+  },
+  "complete_session_count": 29,
+  "effective_session_count": 31,
+  "event_count": 384,
+  "invalid_reasons_count": {
+    "raw_low_quality": 8,
+    "repeated_chars": 6
+  },
+  "label_count": 36,
+  "low_quality_event_count": 8,
+  "quality_flag_distribution": {
+    "low_quality": 4,
+    "ok": 188
+  },
+  "raw_row_count": 192,
+  "scene_distribution": {
+    "1": 36,
+    "2": 33,
+    "3": 31,
+    "4": 31,
+    "5": 30,
+    "6": 31
+  },
+  "session_count": 36,
+  "valid_event_count": 376
+}

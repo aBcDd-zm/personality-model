@@ -1,0 +1,13 @@
+{
+  "aggregated_event_count": 376,
+  "alpha": 0.2,
+  "average_session_confidence": 0.6102,
+  "confidence_threshold": 0.2,
+  "input_scored_event_count": 384,
+  "no_valid_scene_count": 4,
+  "no_valid_session_count": 0,
+  "profile_update_count": 36,
+  "scene_score_count": 192,
+  "session_score_count": 36,
+  "skipped_event_count": 8
+}

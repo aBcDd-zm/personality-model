@@ -47,16 +47,28 @@ dialogue_event + response_meta
 
 ## Zero-shot LLM
 
-`llm_prompt.py` 提供 zero-shot prompt，要求模型：
+`llm_prompt.py` 提供 zero-shot prompt，`llm_scorer.py` 通过 OpenAI SDK 兼容方式调用 DeepSeek。默认 `LLM_ENABLED=false`，不会调用真实 API。
 
+Prompt 要求模型：
+
+- 评分对象永远是玩家。
+- NPC 角色和 NPC 台词只作为情境背景。
+- 证据必须来自用户自由文本或用户选择的选项。
+- 不根据 NPC 台词本身判断玩家人格。
 - 只根据本轮证据评分。
 - 输出纯 JSON。
 - 不做医学诊断。
 - 不判断人格障碍。
 - 每个分数在 0-100。
 - 必须给出行为证据和置信度。
+- `decision_style` 只能是 `rational`、`empathetic`、`assertive`、`avoidant`、`balanced`、`unclear`。
 
-第一版默认不调用真实 API Key，只保留 prompt 与 JSON 解析接口。
+LLM 输出会被二次校验：
+
+- 五维人格分数 clamp 到 0-100。
+- LLM confidence clamp 到 0-0.75，避免单轮 LLM 判断过度自信。
+- evidence 统一为 `{trait, quote, reason}`。
+- API 失败、无 Key、JSON 解析失败时返回 `None`。
 
 ## Hybrid
 
@@ -66,5 +78,9 @@ dialogue_event + response_meta
 hybrid_score = 0.4 * rule_score + 0.6 * llm_score
 ```
 
-没有 LLM 结果时回退到规则 baseline。
+Hybrid 的 `confidence` 先按 `0.4 * rule_confidence + 0.6 * llm_confidence` 合成，再根据 rule 和 LLM 五维分数的平均差异调整：
 
+- 差异较小时提高 confidence，表示两个评分器互相印证。
+- 差异较大时降低 confidence，表示当前事件证据存在解释分歧。
+
+没有 LLM 结果时回退到规则 baseline，`final_result = rule_result`，并在 `scoring_trace.fallback_reason` 中记录原因。
